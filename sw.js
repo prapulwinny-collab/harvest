@@ -1,28 +1,20 @@
 
-const CACHE_NAME = 'shrimp-master-v20';
+const CACHE_NAME = 'shrimp-master-v21';
 const OFFLINE_URL = '/index.html';
 
-const ASSETS = [
+// Only pre-cache the absolute essentials. 
+// Vite generates hashed filenames for JS/CSS, so we cannot list them here manually.
+const CRITICAL_ASSETS = [
   '/',
   '/index.html',
-  '/index.tsx',
-  '/manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap',
-  'https://esm.sh/react@^19.2.3',
-  'https://esm.sh/react-dom@^19.2.3',
-  'https://esm.sh/lucide-react@^0.562.0',
-  'https://esm.sh/recharts@^3.6.0',
-  'https://esm.sh/react-router-dom@^7.11.0',
-  'https://esm.sh/jspdf@^2.5.1',
-  'https://esm.sh/jspdf-autotable@^3.8.2'
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('PWA: Pre-caching critical assets');
-      return cache.addAll(ASSETS);
+      return cache.addAll(CRITICAL_ASSETS);
     })
   );
   self.skipWaiting();
@@ -47,30 +39,41 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // 1. Navigation Requests (Page loads): Network First -> Cache -> Offline Fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+           const resClone = response.clone();
+           caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+           return response;
+        })
+        .catch(() => {
+          return caches.match(event.request)
+            .then(res => res || caches.match(OFFLINE_URL));
+        })
+    );
+    return;
+  }
+
+  // 2. Asset Requests (Images, JS, CSS): Stale-While-Revalidate
+  // Serve from cache immediately, then update cache in background
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // Only cache valid responses (not error codes or opaque responses for external CDNs if strictly needed)
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const resClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, resClone);
+          });
         }
-
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          if (!event.request.url.includes('google.com')) {
-            cache.put(event.request, responseToCache);
-          }
-        });
-
-        return response;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match(OFFLINE_URL);
-        }
+        return networkResponse;
+      }).catch((err) => {
+        // Network failed, just return undefined (the promise will resolve with cachedResponse if available)
       });
+
+      return cachedResponse || fetchPromise;
     })
   );
 });
