@@ -1,0 +1,7 @@
+{
+  "name": "Shrimp Harvest final 22 api integration test",
+  "description": "A robust, offline-first shrimp harvest tracking application designed for ultra-fast crate entry and automated data synchronization.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
