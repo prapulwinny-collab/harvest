@@ -15,13 +15,13 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "logo.png",
+      "src": "/logo.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "logo.png",
+      "src": "/logo.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "maskable"
@@ -49,14 +49,14 @@
       "short_name": "New",
       "description": "Start a new crate entry",
       "url": "/#/",
-      "icons": [{ "src": "logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     },
     {
       "name": "View Timeline",
       "short_name": "Logs",
       "description": "View historical harvest logs",
       "url": "/#/log",
-      "icons": [{ "src": "logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 }
